@@ -9,12 +9,32 @@
 // Fungsi getline untuk input dari UART (saat ini dummy, bisa diupdate nanti)
 void getline(char *buf, int max) {
     int i = 0;
-    char c;
+
     while (1) {
-        uart_putc(c);
-        break;
+        char c = uart_getc();  // <-- HARUS BLOCKING DI SINI
+
+        // ENTER (CR or LF)
+        if (c == '\r' || c == '\n') {
+            uart_println(""); 
+            buf[i] = '\0';
+            return;
+        }
+
+        // Backspace
+        if (c == 127 || c == '\b') {
+            if (i > 0) {
+                i--;
+                uart_print("\b \b");
+            }
+            continue;
+        }
+
+        // Simpan karakter biasa
+        if (i < max-1) {
+            buf[i++] = c;
+            uart_putc(c); // echo
+        }
     }
-    buf[i] = '\0';
 }
 
 void main(void) {

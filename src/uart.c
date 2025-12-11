@@ -3,12 +3,13 @@
 #define UART0DR   (*(volatile unsigned int *)0x4000C000)
 #define UART0FR   (*(volatile unsigned int *)0x4000C018)
 
-char uart_getc() {
-    char c;
-    do {
-        c = UART0DR & 0xFF; // baca data dari UART
-    } while (UART0FR & (1 << 4)); // tunggu data ready
-    return c;
+char uart_getc(void) {
+    // tunggu sampai ADA data (RXFE == 0)
+    while (UART0FR & (1 << 4)) {
+        // RXFE=1 → masih kosong → tunggu
+    }
+
+    return (char)(UART0DR & 0xFF);
 }
 
 void uart_print(const char *s) {
