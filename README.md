@@ -1,2 +1,2 @@
 # ZanOS
-Os gabut Buatan si ojan 🗿
+Os gabut jir lah 😅
