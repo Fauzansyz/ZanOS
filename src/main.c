@@ -4,6 +4,10 @@
 #include "delay.h"
 #include "kernel_log.h"
 #include <stdbool.h>
+#include "heap.h"
+
+#define HEAP_START 0x20000000
+#define HEAP_SIZE  (64 * 1024)
 
 #define CMD_MAX 64
 // Fungsi getline untuk input dari UART (saat ini dummy, bisa diupdate nanti)
@@ -38,9 +42,16 @@ void getline(char *buf, int max) {
 }
 
 void main(void) {
+    extern char _end;
+
+    heap_init(&_end, 64 * 1024);
     uart_println("=== FauzanOS v0.4 Shell ===");
     diag_init();
     ramdisk_init();
+    
+    void *a = kmalloc(100);
+void *b = kmalloc(28);
+(void)a; (void)b;
 
     // Demo RAM disk
     char buffer[128];

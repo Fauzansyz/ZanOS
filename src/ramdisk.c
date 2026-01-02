@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "strings.h"
 #include "kernel_log.h"
+#include "heap.h"
 
 static File files[MAX_FILES];
 

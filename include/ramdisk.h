@@ -6,8 +6,7 @@
 #define MAX_FILES 16
 #define MAX_FILE_SIZE 256
 
-
-typedef struct kernel_status {
+ struct kernel_status {
     int uptime;
     int total_files;
     int memory_used;
