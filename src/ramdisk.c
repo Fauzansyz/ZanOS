@@ -1,6 +1,7 @@
 #include "ramdisk.h"
 #include "uart.h"
 #include "strings.h"
+#include "kernel_log.h"
 
 static File files[MAX_FILES];
 
@@ -16,6 +17,7 @@ int ramdisk_create(const char *name) {
             strncpy(files[i].name, name, 31);
             files[i].name[31] = '\0';  // pastikan null-terminated
             files[i].size = 0;
+            diag_file_created();
             return 0; // sukses
         }
     }

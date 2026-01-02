@@ -2,10 +2,10 @@
 #include "ramdisk.h"
 #include "strings.h"
 #include "delay.h"
+#include "kernel_log.h"
 #include <stdbool.h>
 
 #define CMD_MAX 64
-
 // Fungsi getline untuk input dari UART (saat ini dummy, bisa diupdate nanti)
 void getline(char *buf, int max) {
     int i = 0;
@@ -39,6 +39,7 @@ void getline(char *buf, int max) {
 
 void main(void) {
     uart_println("=== FauzanOS v0.4 Shell ===");
+    diag_init();
     ramdisk_init();
 
     // Demo RAM disk
@@ -88,7 +89,9 @@ void main(void) {
             } else {
                 uart_println("File not found");
             }
-        } 
+        } else if (strncmp(cmd, "diagnostic", 4) == 0 ) {
+          diag_print();
+        }
         else {
             uart_println("Unknown command");
         }

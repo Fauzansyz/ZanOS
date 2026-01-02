@@ -24,6 +24,28 @@ void uart_putc(char c) {
     while (UART0FR & (1 << 5)); // tunggu FIFO kosong
     UART0DR = c;
 }
+void uart_print_int(int n) {
+    char buf[16];
+    int i = 0;
+
+    if (n == 0) {
+        uart_putc('0');
+        return;
+    }
+
+    while (n > 0) {
+        int digit = 0;
+        while (n >= 10) {
+            n -= 10;
+            digit++;
+        }
+        buf[i++] = '0' + n;
+        n = digit;
+    }
+
+    while (i--)
+        uart_putc(buf[i]);
+}
 
 void uart_println(const char *s) {
     uart_print(s);
