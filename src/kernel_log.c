@@ -29,9 +29,11 @@ void diag_print(void) {
     uart_print_int(uptime_sec);
     uart_print("s");
     
-
-    uart_print("Files     :   ");
+    uart_print("   ");
+    
+    uart_print("Files  :");
     uart_print_int(file_count);
+    uart_print("   ");
 
     uart_print("Heap used : ");
     uart_print_int(mem_used);
