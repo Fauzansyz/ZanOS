@@ -39,5 +39,5 @@ void diag_print(void) {
     uart_print_int(mem_used);
     uart_println(" bytes");
 
-    uart_println("Kernel    : FauzanOS v0.5");
+    uart_println("Kernel: FauzanOS v0.5");
 }
