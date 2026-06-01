@@ -108,10 +108,13 @@ void *b = kmalloc(28);
             struct rtc_time tm;
             rtc_get_time(&tm);
             uart_print("Current time: ");
+            if (tm.tm_hour < 10) uart_putc('0');
             uart_print_int(tm.tm_hour);
             uart_print(":");
+            if (tm.tm_min < 10) uart_putc('0');
             uart_print_int(tm.tm_min);
             uart_print(":");
+            if (tm.tm_sec < 10) uart_putc('0');
             uart_print_int(tm.tm_sec);
             uart_println("");
         }
