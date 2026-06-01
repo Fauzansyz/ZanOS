@@ -45,7 +45,7 @@ void main(void) {
     extern char _end;
 
     heap_init(&_end, 64 * 1024);
-    uart_println("=== FauzanOS v0.4 Shell ===");
+    uart_println("=== ZanOS v0.4 ===");
     diag_init();
     ramdisk_init();
     
@@ -60,8 +60,6 @@ void *b = kmalloc(28);
     ramdisk_read("file1", buffer);
     uart_print("Read from file1: ");
     uart_println(buffer);
-
-    uart_println("Demo complete. Entering shell...");
 
     char cmd[CMD_MAX];
 
