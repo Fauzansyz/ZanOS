@@ -67,13 +67,14 @@ uint32_t sys_now(void) {
 }
 
 sys_prot_t sys_arch_protect(void) {
-    interrupts_disable();
-    return 0;
+    uint32_t pval;
+    __asm volatile ("mrs %0, primask" : "=r" (pval));
+    __asm volatile ("cpsid i" : : : "memory");
+    return pval;
 }
 
 void sys_arch_unprotect(sys_prot_t pval) {
-    (void)pval;
-    interrupts_enable();
+    __asm volatile ("msr primask, %0" : : "r" (pval) : "memory");
 }
 
 /* Initializer */

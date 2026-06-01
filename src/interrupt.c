@@ -6,13 +6,17 @@
 volatile bool eth_rx_flag = false;
 
 void ethernet_handler(void) {
-    eth_rx_flag = true;
-    /* Acknowledge the interrupt */
-    (*(volatile uint32_t *)(ETH_MACIACK)) = MAC_INT_RX;
+    uint32_t status = (*(volatile uint32_t *)(ETH_MACRIS));
+    
+    if (status & MAC_INT_RX) {
+        eth_rx_flag = true;
+    }
+
+    /* Acknowledge all pending interrupts */
+    (*(volatile uint32_t *)(ETH_MACIACK)) = status;
 }
 
 void hard_fault_handler(void) {
-    uart_println("!!! HARD FAULT !!!");
     while(1);
 }
 

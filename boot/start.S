@@ -6,33 +6,34 @@
 .global __isr_vector
 __isr_vector:
     .word _estack             /* 0: Initial Stack Pointer */
-    .word reset_handler + 1   /* 1: Reset Handler */
-    .word nmi_handler + 1     /* 2: NMI Handler */
-    .word hard_fault_handler + 1 /* 3: Hard Fault Handler */
-    .word mem_manage_handler + 1 /* 4: MPU Fault Handler */
-    .word bus_fault_handler + 1  /* 5: Bus Fault Handler */
-    .word usage_fault_handler + 1/* 6: Usage Fault Handler */
+    .word reset_handler       /* 1: Reset Handler */
+    .word nmi_handler         /* 2: NMI Handler */
+    .word hard_fault_handler  /* 3: Hard Fault Handler */
+    .word mem_manage_handler  /* 4: MPU Fault Handler */
+    .word bus_fault_handler   /* 5: Bus Fault Handler */
+    .word usage_fault_handler /* 6: Usage Fault Handler */
     .word 0                   /* 7: Reserved */
     .word 0                   /* 8: Reserved */
     .word 0                   /* 9: Reserved */
     .word 0                   /* 10: Reserved */
-    .word svc_handler + 1     /* 11: SVCall Handler */
-    .word debug_mon_handler + 1  /* 12: Debug Monitor Handler */
+    .word svc_handler         /* 11: SVCall Handler */
+    .word debug_mon_handler   /* 12: Debug Monitor Handler */
     .word 0                   /* 13: Reserved */
-    .word pendsv_handler + 1  /* 14: PendSV Handler */
-    .word systick_handler + 1 /* 15: SysTick Handler */
+    .word pendsv_handler      /* 14: PendSV Handler */
+    .word systick_handler     /* 15: SysTick Handler */
 
     /* External Interrupts (IRQs) */
     .rept 42
-    .word default_handler + 1
+    .word default_handler
     .endr
-    .word ethernet_handler + 1 /* 42: Ethernet Interrupt (Exception 58) */
+    .word ethernet_handler    /* 42: Ethernet Interrupt (Exception 58) */
     
     .rept 100 /* Fill the rest with default handlers up to a reasonable limit */
-    .word default_handler + 1
+    .word default_handler
     .endr
 
 .section .text
+.thumb_func
 .global reset_handler
 reset_handler:
     /* Load SP */
@@ -44,10 +45,11 @@ reset_handler:
     ldr   r2, =_edata
 copy_data:
     cmp   r1, r2
-    itt   lt
-    ldrlt r3, [r0], #4
-    strlt r3, [r1], #4
-    blt   copy_data
+    bge   end_copy_data
+    ldr   r3, [r0], #4
+    str   r3, [r1], #4
+    b     copy_data
+end_copy_data:
 
     /* Zero out .bss */
     ldr   r1, =_sbss
@@ -55,9 +57,10 @@ copy_data:
     mov   r3, #0
 zero_bss:
     cmp   r1, r2
-    it    lt
-    strlt r3, [r1], #4
-    blt   zero_bss
+    bge   end_zero_bss
+    str   r3, [r1], #4
+    b     zero_bss
+end_zero_bss:
 
     bl    main
 hang:

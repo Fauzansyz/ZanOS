@@ -59,11 +59,14 @@ uint32_t eth_receive(void *buffer, uint32_t max_len) {
     uint32_t len_word = REG(ETH_MACDATA);
     uint32_t len = len_word & 0xFFFF; // Packet length is in the first 2 bytes
     
-    // The length word itself is part of the FIFO data, we just read it.
-    // Actually, in LM3S, length is bytes 0-1, data starts at byte 2 of the same word?
-    // Wait, the datasheet says:
-    // "The frame length is contained in the first 16 bits of the first word"
-    // "The remaining 16 bits of the first word contain the first 2 bytes of the destination MAC"
+    // Safety check for corrupted FIFO
+    if (len == 0 || len > 1522) {
+        // Reset RX FIFO and receiver
+        REG(ETH_MACRCTL) &= ~MAC_RCTL_RXEN;
+        REG(ETH_MACRCTL) |= MAC_RCTL_RSTFIFO;
+        REG(ETH_MACRCTL) |= MAC_RCTL_RXEN;
+        return 0;
+    }
     
     uint8_t *p = (uint8_t *)buffer;
     uint32_t stored_len = 0;

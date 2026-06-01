@@ -86,6 +86,7 @@ void getline(char *buf, int max) {
 void main(void) {
     extern char _sheap;
     extern void interrupts_enable(void);
+    extern void interrupts_disable(void);
 
     heap_init(&_sheap, 8 * 1024);
     uart_println("HEAP INIT DONE");
@@ -97,7 +98,8 @@ void main(void) {
     uint8_t mac_addr[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02};
     eth_init(mac_addr);
     
-    /* Initialize lwIP stack */
+    /* Initialize lwIP stack with interrupts disabled to prevent races */
+    interrupts_disable();
     lwip_init();
 
     /* Add our network interface */
@@ -116,13 +118,15 @@ void main(void) {
 
     /* Start DHCP to get an IP automatically */
     dhcp_start(&zanos_netif);
+    
+    interrupts_enable();
+    
     uart_println("[LWIP] lwIP Stack Initialized & DHCP Started.");
     
-    /*
+    /* Configure SysTick for 10ms ticks (assuming 16MHz clock for LM3S) */
     (*(volatile uint32_t *)0xE000E014) = 160000 - 1; // Reload value
     (*(volatile uint32_t *)0xE000E018) = 0;          // Current value
     (*(volatile uint32_t *)0xE000E010) = 0x07;       // Enable, Interrupt, Clock Source
-    */
     
     interrupts_enable(); // Aktifkan interupsi hardware
     uart_println("Interrupts enabled.");
