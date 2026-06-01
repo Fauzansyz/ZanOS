@@ -36,6 +36,7 @@
 #define LWIP_UDP                1
 #define LWIP_DHCP               1
 #define LWIP_NETIF_HOSTNAME     1
+#define LWIP_DNS                1
 
 #define LWIP_HAVE_SLIPIF        0
 #define PPP_SUPPORT             0

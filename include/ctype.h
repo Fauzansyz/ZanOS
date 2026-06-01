@@ -8,5 +8,6 @@
 #define isupper(c) ((c) >= 'A' && (c) <= 'Z')
 #define isalpha(c) (islower(c) || isupper(c))
 #define isalnum(c) (isalpha(c) || isdigit(c))
+#define tolower(c) (isupper(c) ? ((c) + 32) : (c))
 
 #endif

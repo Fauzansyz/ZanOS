@@ -38,5 +38,7 @@ typedef uintptr_t mem_ptr_t;
 #define SZT_F "d"
 
 typedef int sys_prot_t;
+extern uint32_t sys_now(void);
+#define LWIP_RAND() (sys_now())
 
 #endif

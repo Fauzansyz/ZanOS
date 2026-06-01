@@ -14,6 +14,8 @@
 #include "lwip/dhcp.h"
 #include "lwip/timeouts.h"
 #include "lwip/debug.h"
+#include "lwip/dns.h"
+#include "http_client.h"
 
 struct netif zanos_netif;
 extern err_t ethernetif_init(struct netif *netif);
@@ -24,6 +26,19 @@ extern void ethernetif_input(struct netif *netif);
 
 #define CMD_MAX 64
 extern volatile bool eth_rx_flag;
+
+static volatile bool dns_resolved = false;
+static ip_addr_t resolved_ip;
+
+static void dns_callback(const char *name, const ip_addr_t *ipaddr, void *callback_arg) {
+    (void)callback_arg;
+    if (ipaddr != NULL) {
+        resolved_ip = *ipaddr;
+    } else {
+        ip_addr_set_zero(&resolved_ip);
+    }
+    dns_resolved = true;
+}
 
 void lwip_poll(void) {
     sys_check_timeouts();
@@ -142,10 +157,19 @@ void main(void) {
             uart_println("  ls    - list RAM disk files");
             uart_println("  cat   - read file contents");
             uart_println("  time  - show current RTC time");
+            uart_println("  host  - resolve domain name");
+            uart_println("  curl  - fetch HTTP (e.g., curl example.com)");
         } 
         else if (strcmp(cmd, "hello") == 0) {
             uart_println("Hello Fauzan!");
         } 
+        else if (strncmp(cmd, "curl ", 5) == 0) {
+            char *hostname = cmd + 5;
+            http_get(hostname, "/");
+            while (http_is_busy()) {
+                lwip_poll();
+            }
+        }
         else if (strcmp(cmd, "info") == 0) {
             uart_println("FauzanOS v0.4 - Minimal ARM64 kernel with RAM disk");
         } 
@@ -172,6 +196,37 @@ void main(void) {
                 uart_println("  Status:  IP assigned via DHCP");
             } else {
                 uart_println("  Status:  Waiting for DHCP...");
+            }
+        }
+        else if (strncmp(cmd, "host ", 5) == 0) {
+            char *domain = cmd + 5;
+            uart_print("Resolving ");
+            uart_println(domain);
+            
+            ip_addr_t dns_ip;
+            err_t err = dns_gethostbyname(domain, &dns_ip, dns_callback, NULL);
+            if (err == ERR_OK) {
+                uart_print("IP: ");
+                uart_println(ipaddr_ntoa(&dns_ip));
+            } else if (err == ERR_INPROGRESS) {
+                dns_resolved = false;
+                int timeout = 0;
+                while (!dns_resolved && timeout < 2000000) {
+                    lwip_poll();
+                    timeout++;
+                }
+                if (dns_resolved) {
+                    if (!ip_addr_isany(&resolved_ip)) {
+                        uart_print("IP: ");
+                        uart_println(ipaddr_ntoa(&resolved_ip));
+                    } else {
+                        uart_println("Failed to resolve.");
+                    }
+                } else {
+                    uart_println("DNS resolution timed out.");
+                }
+            } else {
+                uart_println("DNS error.");
             }
         }
         else if (strncmp(cmd, "cat ", 4) == 0) {
