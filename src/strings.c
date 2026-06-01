@@ -23,11 +23,23 @@ void strncpy(char *dest, const char *src, int n) {
         dest[i] = '\0';
 }
 
-// implementasi mini strncmp
 int strncmp(const char *a, const char *b, int n) {
     for (int i = 0; i < n; i++) {
         if (a[i] != b[i] || a[i] == '\0' || b[i] == '\0')
             return (unsigned char)a[i] - (unsigned char)b[i];
     }
     return 0;
+}
+
+void *memcpy(void *dest, const void *src, int n) {
+    char *d = (char *)dest;
+    const char *s = (const char *)src;
+    while (n--) *d++ = *s++;
+    return dest;
+}
+
+void *memset(void *s, int c, int n) {
+    char *p = (char *)s;
+    while (n--) *p++ = (char)c;
+    return s;
 }

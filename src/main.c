@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "heap.h"
 #include "rtc.h"
+#include "eth.h"
 
 #define HEAP_START 0x20000000
 #define HEAP_SIZE  (64 * 1024)
@@ -44,6 +45,7 @@ void getline(char *buf, int max) {
 
 void main(void) {
     extern char _end;
+    extern void interrupts_enable(void);
 
     heap_init(&_end, 64 * 1024);
     uart_println("=== ZanOS v0.4 ===");
@@ -51,9 +53,15 @@ void main(void) {
     ramdisk_init();
     rtc_init();
     
+    uint8_t mac_addr[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02};
+    eth_init(mac_addr);
+    
+    interrupts_enable(); // Aktifkan interupsi hardware
+    uart_println("Interrupts enabled.");
+    
     void *a = kmalloc(100);
-void *b = kmalloc(28);
-(void)a; (void)b;
+    void *b = kmalloc(28);
+    (void)a; (void)b;
 
     // Demo RAM disk
     char buffer[128];
