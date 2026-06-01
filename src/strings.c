@@ -31,11 +31,43 @@ int strncmp(const char *a, const char *b, int n) {
     return 0;
 }
 
+int atoi(const char *s) {
+    int res = 0;
+    while (*s >= '0' && *s <= '9') {
+        res = res * 10 + (*s - '0');
+        s++;
+    }
+    return res;
+}
+
 void *memcpy(void *dest, const void *src, int n) {
     char *d = (char *)dest;
     const char *s = (const char *)src;
     while (n--) *d++ = *s++;
     return dest;
+}
+
+void *memmove(void *dest, const void *src, int n) {
+    char *d = (char *)dest;
+    const char *s = (const char *)src;
+    if (d < s) {
+        while (n--) *d++ = *s++;
+    } else {
+        d += n;
+        s += n;
+        while (n--) *--d = *--s;
+    }
+    return dest;
+}
+
+int memcmp(const void *s1, const void *s2, int n) {
+    const unsigned char *p1 = (const unsigned char *)s1;
+    const unsigned char *p2 = (const unsigned char *)s2;
+    while (n--) {
+        if (*p1 != *p2) return *p1 - *p2;
+        p1++; p2++;
+    }
+    return 0;
 }
 
 void *memset(void *s, int c, int n) {

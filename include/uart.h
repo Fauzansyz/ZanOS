@@ -5,6 +5,8 @@ void uart_putc(char c);
 void uart_print(const char *s);
 void uart_println(const char *s);
 void uart_print_int(int n);
+void uart_printf(const char *fmt, ...);
 
+int uart_has_data(void);
 char uart_getc(void);
 #endif

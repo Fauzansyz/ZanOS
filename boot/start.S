@@ -32,12 +32,33 @@ __isr_vector:
     .word default_handler + 1
     .endr
 
-.equ _estack, 0x20001000
-
 .section .text
 .global reset_handler
 reset_handler:
+    /* Load SP */
     ldr   sp, =_estack
+
+    /* Copy .data from Flash to RAM */
+    ldr   r0, =_etext
+    ldr   r1, =_sdata
+    ldr   r2, =_edata
+copy_data:
+    cmp   r1, r2
+    itt   lt
+    ldrlt r3, [r0], #4
+    strlt r3, [r1], #4
+    blt   copy_data
+
+    /* Zero out .bss */
+    ldr   r1, =_sbss
+    ldr   r2, =_ebss
+    mov   r3, #0
+zero_bss:
+    cmp   r1, r2
+    it    lt
+    strlt r3, [r1], #4
+    blt   zero_bss
+
     bl    main
 hang:
     b     hang

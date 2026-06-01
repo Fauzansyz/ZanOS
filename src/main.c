@@ -7,47 +7,73 @@
 #include "heap.h"
 #include "rtc.h"
 #include "eth.h"
+#include "lwip/init.h"
+#include "lwip/netif.h"
+#include "lwip/etharp.h"
+#include "netif/ethernet.h"
+#include "lwip/dhcp.h"
+#include "lwip/timeouts.h"
+#include "lwip/debug.h"
+
+struct netif zanos_netif;
+extern err_t ethernetif_init(struct netif *netif);
+extern void ethernetif_input(struct netif *netif);
 
 #define HEAP_START 0x20000000
 #define HEAP_SIZE  (64 * 1024)
 
 #define CMD_MAX 64
-// Fungsi getline untuk input dari UART (saat ini dummy, bisa diupdate nanti)
+extern volatile bool eth_rx_flag;
+
+void lwip_poll(void) {
+    sys_check_timeouts();
+    if (eth_rx_flag) {
+        eth_rx_flag = false;
+        ethernetif_input(&zanos_netif);
+    }
+}
+
+// Fungsi getline untuk input dari UART (non-blocking untuk lwIP)
 void getline(char *buf, int max) {
     int i = 0;
 
     while (1) {
-        char c = uart_getc();  // <-- HARUS BLOCKING DI SINI
+        lwip_poll();
 
-        // ENTER (CR or LF)
-        if (c == '\r' || c == '\n') {
-            uart_println(""); 
-            buf[i] = '\0';
-            return;
-        }
+        if (uart_has_data()) {
+            char c = uart_getc();
 
-        // Backspace
-        if (c == 127 || c == '\b') {
-            if (i > 0) {
-                i--;
-                uart_print("\b \b");
+            // ENTER (CR or LF)
+            if (c == '\r' || c == '\n') {
+                uart_println(""); 
+                buf[i] = '\0';
+                return;
             }
-            continue;
-        }
 
-        // Simpan karakter biasa
-        if (i < max-1) {
-            buf[i++] = c;
-            uart_putc(c); // echo
+            // Backspace
+            if (c == 127 || c == '\b') {
+                if (i > 0) {
+                    i--;
+                    uart_print("\b \b");
+                }
+                continue;
+            }
+
+            // Simpan karakter biasa
+            if (i < max-1) {
+                buf[i++] = c;
+                uart_putc(c); // echo
+            }
         }
     }
 }
 
 void main(void) {
-    extern char _end;
+    extern char _sheap;
     extern void interrupts_enable(void);
 
-    heap_init(&_end, 64 * 1024);
+    heap_init(&_sheap, 8 * 1024);
+    uart_println("HEAP INIT DONE");
     uart_println("=== ZanOS v0.4 ===");
     diag_init();
     ramdisk_init();
@@ -55,6 +81,33 @@ void main(void) {
     
     uint8_t mac_addr[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02};
     eth_init(mac_addr);
+    
+    /* Initialize lwIP stack */
+    lwip_init();
+
+    /* Add our network interface */
+    ip4_addr_t ipaddr, netmask, gw;
+    ip4_addr_set_zero(&ipaddr);
+    ip4_addr_set_zero(&netmask);
+    ip4_addr_set_zero(&gw);
+
+    netif_add(&zanos_netif, &ipaddr, &netmask, &gw, NULL, ethernetif_init, ethernet_input);
+    netif_set_default(&zanos_netif);
+    netif_set_up(&zanos_netif);
+    
+    /* Inform lwIP of our MAC address */
+    zanos_netif.hwaddr_len = 6;
+    memcpy(zanos_netif.hwaddr, mac_addr, 6);
+
+    /* Start DHCP to get an IP automatically */
+    dhcp_start(&zanos_netif);
+    uart_println("[LWIP] lwIP Stack Initialized & DHCP Started.");
+    
+    /*
+    (*(volatile uint32_t *)0xE000E014) = 160000 - 1; // Reload value
+    (*(volatile uint32_t *)0xE000E018) = 0;          // Current value
+    (*(volatile uint32_t *)0xE000E010) = 0x07;       // Enable, Interrupt, Clock Source
+    */
     
     interrupts_enable(); // Aktifkan interupsi hardware
     uart_println("Interrupts enabled.");
@@ -102,6 +155,25 @@ void main(void) {
         else if (strcmp(cmd, "ls") == 0) {
             ramdisk_ls(); // list files di RAM disk
         } 
+        else if (strcmp(cmd, "ifconfig") == 0) {
+            uart_print("Interface: ");
+            uart_putc(zanos_netif.name[0]);
+            uart_putc(zanos_netif.name[1]);
+            uart_println("");
+            
+            uart_print("  IP:      ");
+            uart_println(ip4addr_ntoa(netif_ip4_addr(&zanos_netif)));
+            uart_print("  Mask:    ");
+            uart_println(ip4addr_ntoa(netif_ip4_netmask(&zanos_netif)));
+            uart_print("  Gateway: ");
+            uart_println(ip4addr_ntoa(netif_ip4_gw(&zanos_netif)));
+            
+            if (dhcp_supplied_address(&zanos_netif)) {
+                uart_println("  Status:  IP assigned via DHCP");
+            } else {
+                uart_println("  Status:  Waiting for DHCP...");
+            }
+        }
         else if (strncmp(cmd, "cat ", 4) == 0) {
             char *filename = cmd + 4;
             if (ramdisk_read(filename, buffer) == 0) {

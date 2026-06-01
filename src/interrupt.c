@@ -1,16 +1,12 @@
 #include "uart.h"
 #include "eth.h"
-#include "net.h"
 #include <stdint.h>
+#include <stdbool.h>
+
+volatile bool eth_rx_flag = false;
 
 void ethernet_handler(void) {
-    uint8_t buffer[1518];
-    uint32_t len = eth_receive(buffer, 1518);
-    
-    if (len > 0) {
-        net_handle_packet(buffer, len);
-    }
-
+    eth_rx_flag = true;
     /* Acknowledge the interrupt */
     (*(volatile uint32_t *)(ETH_MACIACK)) = MAC_INT_RX;
 }
@@ -20,7 +16,11 @@ void hard_fault_handler(void) {
     while(1);
 }
 
+extern void sys_inc_ticks(uint32_t ms);
+
 void systick_handler(void) {
+    /* increment ticks */
+    sys_inc_ticks(10);
 }
 
 /* Global interrupt enable */

@@ -31,14 +31,11 @@ void eth_send(void *data, uint32_t len) {
     uint8_t *p = (uint8_t *)data;
     uint32_t word;
     
-    /* Write length to first 16 bits of FIFO if hardware requires, 
-       but for LM3S, data is written directly to MACDATA. */
+    /* Write length (low byte first, then high byte) */
+    REG(ETH_MACDATA) = (len & 0xFF) | (((len >> 8) & 0xFF) << 8);
     
-    // For LM3S6965: First write length (low byte, high byte)
-    REG(ETH_MACDATA) = (p[0]) | (p[1] << 8);
-    
-    // Then write the rest of the packet 4 bytes at a time
-    for (uint32_t i = 2; i < len; i += 4) {
+    /* Write the packet 4 bytes at a time */
+    for (uint32_t i = 0; i < len; i += 4) {
         word = p[i];
         if (i+1 < len) word |= (p[i+1] << 8);
         if (i+2 < len) word |= (p[i+2] << 16);
@@ -49,8 +46,10 @@ void eth_send(void *data, uint32_t len) {
     /* Start transmission */
     REG(ETH_MACTR) = 1;
 
-    // Wait for completion (simple polling for now)
-    while (!(REG(ETH_MACRIS) & MAC_INT_TXEMP));
+    /* Wait for completion with a simple timeout */
+    for (volatile int i = 0; i < 1000; i++) {
+        if (REG(ETH_MACRIS) & MAC_INT_TXEMP) break;
+    }
     REG(ETH_MACIACK) = MAC_INT_TXEMP;
 }
 
@@ -60,16 +59,40 @@ uint32_t eth_receive(void *buffer, uint32_t max_len) {
     uint32_t len_word = REG(ETH_MACDATA);
     uint32_t len = len_word & 0xFFFF; // Packet length is in the first 2 bytes
     
-    uint8_t *p = (uint8_t *)buffer;
+    // The length word itself is part of the FIFO data, we just read it.
+    // Actually, in LM3S, length is bytes 0-1, data starts at byte 2 of the same word?
+    // Wait, the datasheet says:
+    // "The frame length is contained in the first 16 bits of the first word"
+    // "The remaining 16 bits of the first word contain the first 2 bytes of the destination MAC"
     
-    // Read words from FIFO
-    for (uint32_t i = 0; i < len && i < max_len; i += 4) {
+    uint8_t *p = (uint8_t *)buffer;
+    uint32_t stored_len = 0;
+    
+    // Process the first word (which we already read)
+    if (max_len >= 2) {
+        p[0] = (len_word >> 16) & 0xFF;
+        p[1] = (len_word >> 24) & 0xFF;
+        stored_len = 2;
+    }
+    
+    // Calculate how many more words to read
+    // The length includes the 2-byte length field itself! 
+    // So if len is 64, there are 64 - 2 = 62 bytes of data.
+    // 62 bytes minus the 2 bytes we just extracted = 60 bytes left.
+    // 60 bytes = 15 words.
+    
+    uint32_t bytes_to_read = len > 2 ? len - 2 : 0;
+    uint32_t words_to_read = (bytes_to_read + 3) / 4;
+    
+    for (uint32_t i = 0; i < words_to_read; i++) {
         uint32_t word = REG(ETH_MACDATA);
-        p[i] = word & 0xFF;
-        if (i+1 < len) p[i+1] = (word >> 8) & 0xFF;
-        if (i+2 < len) p[i+2] = (word >> 16) & 0xFF;
-        if (i+3 < len) p[i+3] = (word >> 24) & 0xFF;
+        
+        for (int j = 0; j < 4; j++) {
+            if (stored_len < bytes_to_read + 2 && stored_len < max_len) {
+                p[stored_len++] = (word >> (j * 8)) & 0xFF;
+            }
+        }
     }
 
-    return len;
+    return stored_len;
 }
