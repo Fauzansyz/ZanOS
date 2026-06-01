@@ -1,6 +1,6 @@
 CC = clang
 LD = ld.lld
-CFLAGS = -target arm-none-eabi -ffreestanding -mthumb -Iinclude
+CFLAGS = -target arm-none-eabi -mcpu=cortex-m3 -ffreestanding -mthumb -Iinclude
 SRC = $(wildcard src/*.c)
 OBJ = $(SRC:.c=.o)
 BOOT = boot/start.o

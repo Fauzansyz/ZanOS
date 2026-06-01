@@ -5,6 +5,7 @@
 #include "kernel_log.h"
 #include <stdbool.h>
 #include "heap.h"
+#include "rtc.h"
 
 #define HEAP_START 0x20000000
 #define HEAP_SIZE  (64 * 1024)
@@ -48,6 +49,7 @@ void main(void) {
     uart_println("=== ZanOS v0.4 ===");
     diag_init();
     ramdisk_init();
+    rtc_init();
     
     void *a = kmalloc(100);
 void *b = kmalloc(28);
@@ -78,6 +80,7 @@ void *b = kmalloc(28);
             uart_println("  clear - clear screen (simulated)");
             uart_println("  ls    - list RAM disk files");
             uart_println("  cat   - read file contents");
+            uart_println("  time  - show current RTC time");
         } 
         else if (strcmp(cmd, "hello") == 0) {
             uart_println("Hello Fauzan!");
@@ -101,8 +104,20 @@ void *b = kmalloc(28);
         } else if (strncmp(cmd, "diagnostic", 4) == 0 ) {
           diag_print();
         }
+        else if (strcmp(cmd, "time") == 0) {
+            struct rtc_time tm;
+            rtc_get_time(&tm);
+            uart_print("Current time: ");
+            uart_print_int(tm.tm_hour);
+            uart_print(":");
+            uart_print_int(tm.tm_min);
+            uart_print(":");
+            uart_print_int(tm.tm_sec);
+            uart_println("");
+        }
         else {
             uart_println("Unknown command");
         }
     }
 }
+
